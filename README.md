@@ -22,31 +22,52 @@ Then, include the dependency in your project's `pom.xml`:
 </dependency>
 ```
 
+## Configuration
+
+Create a `.env` file in the root of your project:
+
+```env
+# LipaHub Configuration
+LIPAHUB_ENV=production
+LIPAHUB_API_KEY=your_live_api_key_here
+LIPAHUB_API_SECRET=your_live_api_secret_here
+```
+
+Ensure your `.env` file is excluded from your version control (`.gitignore`).
+
 ## Usage
 
-### 1. Simple USSD Push (Sandbox)
+### 1. Initialize the SDK
+
+You can use the excellent `dotenv-java` library (e.g. `io.github.cdimascio:dotenv-java`) to load `.env` variables safely into your Java app.
 
 ```java
 import com.lipahub.TzPay;
 import com.lipahub.models.PaymentRequest;
 import com.lipahub.models.PaymentResponse;
 import com.lipahub.config.TzPayConfig;
+import io.github.cdimascio.dotenv.Dotenv;
 
 public class Main {
     public static void main(String[] args) {
-        // Initialize SDK (Sandbox mode)
+        // Load .env file
+        Dotenv dotenv = Dotenv.load();
+
+        // Initialize SDK in Production mode
         TzPayConfig config = new TzPayConfig();
-        config.setEnvironment("sandbox");
+        config.setEnvironment(dotenv.get("LIPAHUB_ENV", "sandbox"));
+        config.setApiKey(dotenv.get("LIPAHUB_API_KEY"));
+        config.setApiSecret(dotenv.get("LIPAHUB_API_SECRET"));
         
         TzPay tzpay = new TzPay(config);
 
         // Create Payment Request
         PaymentRequest req = new PaymentRequest();
-        req.setPhone("255714542241");
-        req.setAmount(1000);
-        req.setReference("ORDER-001");
+        req.setPhone("255714542241"); // Customer phone number
+        req.setAmount(1000);          // Amount in TZS
+        req.setReference("ORDER-001"); // Your unique order reference
 
-        // Execute Payment
+        // Execute Payment (USSD Push)
         try {
             PaymentResponse response = tzpay.requestPayment(req);
             System.out.println("Success! Transaction ID: " + response.getTransactionId());
@@ -59,20 +80,9 @@ public class Main {
 
 ### 2. Checking Status
 
+To check if the user has approved the PIN on their phone:
+
 ```java
 PaymentResponse status = tzpay.queryStatus("ORDER-001");
-System.out.println("Status: " + status.getStatus());
-```
-
-## Production Usage
-
-Switch to the live ClickPesa gateway by adding credentials to your configuration:
-
-```java
-TzPayConfig config = new TzPayConfig();
-config.setEnvironment("production");
-config.setClickPesaApiKey("YOUR_KEY");
-config.setClickPesaApiSecret("YOUR_SECRET");
-
-TzPay tzpay = new TzPay(config);
+System.out.println("Status: " + status.getStatus()); // SUCCESS, PENDING, or FAILED
 ```
